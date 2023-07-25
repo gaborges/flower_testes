@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Starting server"
-#python server.py & #> server.log
+python server.py > server.log & #
 sleep 3  # Sleep for 3s to give the server enough time to start
 
 for i in `seq 0 1`; do
