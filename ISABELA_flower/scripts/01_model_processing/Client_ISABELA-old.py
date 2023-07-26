@@ -12,7 +12,6 @@ import tensorflow as tf
 import sklearn
 
 
-import numpy as np
 import pandas as pd
 
 #!export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
@@ -90,36 +89,6 @@ def printMetrics(y_test,yhat_probs):
     array.append(matrix[1][1]) # TN
     
     return results, array
-
-def showGlobalMetrics(metrics):
-    accuracy,precision,recall,f1_score,cohen_kappa_score,roc_auc_score = 0,0,0,0,0,0
-    for metric in metrics:
-        accuracy = accuracy + metric['accuracy']
-        precision = precision + metric['precision']
-        recall = recall + metric['recall']
-        f1_score = f1_score + metric['f1_score']
-        cohen_kappa_score = cohen_kappa_score + metric['cohen_kappa_score']
-        roc_auc_score = roc_auc_score + metric['roc_auc_score']
-        
-    # mean
-    size = len(metrics)
-    print(size)
-    accuracy = accuracy / size
-    precision = precision / size
-    recall = recall / size
-    f1_score = f1_score / size
-    cohen_kappa_score = cohen_kappa_score / size
-    roc_auc_score = roc_auc_score / size
-    
-    #show:\
-    print("accuracy: ",accuracy)
-    print("precision: ",precision)
-    print("recall: ",recall)
-    print("f1_score: ",f1_score)
-    print("cohen_kappa_score: ",cohen_kappa_score)
-    print("roc_auc_score: ",roc_auc_score)
-    
-    return [accuracy,precision,recall,f1_score,cohen_kappa_score,roc_auc_score]
 
 
 # In[3]:
@@ -199,7 +168,7 @@ BATCH_SIZE = 32
 VERBOSE = 1
 
 
-# In[5]:
+# In[6]:
 
 
 # input folder
@@ -234,7 +203,7 @@ X_train  = pd.read_csv(inputFolders+"student_"+train_folder+"_transformed.csv")
 X_train
 
 
-# In[6]:
+# In[8]:
 
 
 print("Preparing test data")
@@ -269,7 +238,7 @@ X_test
 
 
 
-# In[7]:
+# In[9]:
 
 
 # selected features
@@ -278,7 +247,7 @@ outputClasses = ["awake","asleep"]
 #outputClasses = ["class"]
 
 
-# In[8]:
+# In[10]:
 
 
 # one-hot encoding function
@@ -308,7 +277,7 @@ X_test = transform_output_nominal_class_into_one_hot_encoding(X_test)
 X_train = transform_output_nominal_class_into_one_hot_encoding(X_train)
 
 
-# In[9]:
+# In[11]:
 
 
 def transform_data_type(dataframe):
@@ -329,7 +298,7 @@ X_test = transform_data_type(X_test)
 X_test.info()
 
 
-# In[10]:
+# In[12]:
 
 
 # selects the data to train and test
@@ -346,7 +315,7 @@ print(client_test_dataset.element_spec)
 client_test_dataset
 
 
-# In[11]:
+# In[13]:
 
 
 # selects the data to train and test
@@ -363,7 +332,7 @@ print(client_train_dataset.element_spec)
 client_train_dataset
 
 
-# In[12]:
+# In[14]:
 
 
 def create_keras_model():
@@ -377,7 +346,7 @@ def create_keras_model():
     ])
 
 
-# In[13]:
+# In[15]:
 
 
 keras_model = create_keras_model()
@@ -385,7 +354,7 @@ keras_model = create_keras_model()
 keras_model.summary()
 
 
-# In[14]:
+# In[16]:
 
 
 # Load model and data (MobileNetV2, CIFAR-10)
@@ -394,72 +363,11 @@ model.compile("adam", "categorical_crossentropy", metrics=["accuracy"])
 #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 
 
-# In[ ]:
+# In[17]:
 
 
-
-
-
-# In[15]:
-
-
-def evaluate_and_save_results(keras_model,X_test_data, y_test_label, current_round_index, clientId, prefix_string = "Results"):
-     # predict values
-    yhat_probs = keras_model.predict(X_test_data)
-    
-    # as we deal with a classification problem with one hot encoding, we must round the values to 0 and 1.
-    yhat_probs_rounded = yhat_probs.round()
-    
-    # create a dataframe with the predicted data
-    y_predicted_df = pd.DataFrame(data=yhat_probs_rounded,columns=['awake','asleep']) 
-    #y_test_label_label = pd.DataFrame(data=y_test_label,columns=['awake','asleep']) 
-    
-    roundData = []
-
-    columns = ['class','accuracy','precision','recall',
-               'f1_score','cohen_kappa_score','roc_auc_score','confusion_matrix',
-               'TP','FP','FN','TN']
-    
-    # Instantiate the list that will contain the results
-    listOfMetrics = list()
-    
-    print('awake')    
-    res,resA = printMetrics(y_test_label['awake'],y_predicted_df['awake'])
-    listOfMetrics.append(res)
-    
-    classData = np.concatenate((['awake'], resA))
-    roundData.append(classData)
-    
-    print('')
-    print('asleep')
-    res,resA = printMetrics(y_test_label['asleep'],y_predicted_df['asleep'])
-    listOfMetrics.append(res)
-    # new data
-    classData = np.concatenate((['asleep'], resA))
-    roundData.append(classData)
-    
-    print('Global')
-    resA = showGlobalMetrics(listOfMetrics) #return [accuracy,precision,recall,f1_score,cohen_kappa_score,roc_auc_score
-    # new data
-    classData = np.concatenate((['avg'], resA))
-    roundData.append(classData)
-    
-    dataMetrics = pd.DataFrame(data=roundData,columns=columns) 
-    
-    # write file
-    outputMetricFile = "results/"+prefix_string+"_MLP_unbalanced_client_" + str(clientId) + "_round_" + str(current_round_index) + ".csv"
-    dataMetrics.to_csv(outputMetricFile, sep=',', encoding='utf-8', index=False)
-
-
-# In[16]:
-
-
-# initialize round
-round_index = 0
 # Define Flower client
 class CifarClient(fl.client.NumPyClient):
-    
-    
     def get_parameters(self, config):
         #print(f"[Client {self}] config")
         #print(model.get_weights())
@@ -470,13 +378,11 @@ class CifarClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         model.set_weights(parameters)
         model.fit(X_train_data, y_train_label, epochs=NUM_EPOCHS, batch_size=BATCH_SIZE,verbose=VERBOSE)
-        # print model results
-        evaluate_and_save_results(keras_model,X_test_data, y_test_label, round_index, clientId,"local_model_results")
         return model.get_weights(), len(X_train_data), {}
 
     def evaluate(self, parameters, config):
         """Evaluate parameters on the locally held test set."""
-        global round_index
+
         # Update local model with global parameters
         
         model.set_weights(parameters)
@@ -485,28 +391,16 @@ class CifarClient(fl.client.NumPyClient):
         #loss, accuracy = model.evaluate(x_test, y_test)
         print("test metrics: ",accuracy)
         
-        # print global model results
-        if(clientId == 0):
-            evaluate_and_save_results(keras_model,X_test_data, y_test_label, round_index, clientId,"global_model")
-        # increment round
-        round_index = round_index + 1
-        
         # Return results, including the custom accuracy metric
         num_examples_test = len(X_test_data)
         return loss, num_examples_test, {"accuracy": accuracy}
 
 
-# In[17]:
+# In[18]:
 
 
 # Start Flower client
 fl.client.start_numpy_client(server_address="127.0.0.1:8099", client=CifarClient())
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
